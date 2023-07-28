@@ -63,10 +63,10 @@ class SarsaLambdaTable(RL):
                     index=self.q_table.columns,
                     name=state,
                 )
-            self.q_table = self.q_table.append(to_be_append)
+            self.q_table = pd.concat([self.q_table, to_be_append.to_frame().T])
 
             # also update eligibility trace
-            self.eligibility_trace = self.eligibility_trace.append(to_be_append)
+            self.eligibility_trace = pd.concat([self.eligibility_trace, to_be_append.to_frame().T])
 
     def learn(self, s, a, r, s_, a_):
         self.check_state_exist(s_)

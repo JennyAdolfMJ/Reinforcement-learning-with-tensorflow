@@ -42,10 +42,11 @@ class QLearningTable:
     def check_state_exist(self, state):
         if state not in self.q_table.index:
             # append new state to q table
-            self.q_table = self.q_table.append(
+            self.q_table = pd.concat([
+                self.q_table,
                 pd.Series(
                     [0]*len(self.actions),
                     index=self.q_table.columns,
                     name=state,
-                )
+                ).to_frame().T]
             )
