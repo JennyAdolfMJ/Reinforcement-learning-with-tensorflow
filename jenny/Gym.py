@@ -6,7 +6,11 @@ from DQN_Brain import DQN_Brain
 class Gym:
     def __init__(self, env_name):
         self.env = gym.make(env_name, render_mode='human')
-        self.brain = DQN_Brain(self.env.action_space.n, self.env.observation_space.shape[0], memory_size=2000, e_greedy_increment=0.001)
+        self.brain = DQN_Brain(self.env.action_space.n, 
+                               self.env.observation_space.shape[0], 
+                               memory_size=2000, 
+                               e_greedy_increment=0.001,
+                               prioritized=True)
         
     def run(self):
         his_steps = []
@@ -26,7 +30,7 @@ class Gym:
             self.brain.store_transaction(observation, action, reward, observation_)
 
             if (step > 200) and (step % 5 == 0):
-                self.brain.learn_DQ()
+                self.brain.learn()
 
             if terminated or truncated:
                 observation, info = self.env.reset()
