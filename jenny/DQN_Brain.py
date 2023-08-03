@@ -115,6 +115,21 @@ class Memory(object):  # stored as ( s, a, r, s_ ) in SumTree
         for ti, p in zip(tree_idx, ps):
             self.tree.update(ti, p)
 
+# self-implementation of a dueling layer
+class Dueling(tf.keras.layers.Layer):
+    def __init__(self):
+        super().__init__()
+        self.value = tf.keras.layers.Dense(10, activation='relu')
+        self.advantage = tf.keras.layers.Dense(10, activation='relu')
+        self.add = tf.keras.layers.Add()
+        self.subtract = tf.keras.layers.Subtract()
+
+    def call(self, inputs):
+        advantage = self.subtract([self.advantage(inputs), tf.reduce_mean(self.advantage(inputs), axis=1, keepdims=True)])
+        res = self.add([self.value(inputs), advantage])
+
+        return res
+
 
 class DQN_Brain:
     def __init__(self, 
@@ -126,7 +141,8 @@ class DQN_Brain:
                  e_greedy=0.9,
                  e_greedy_increment=None,
                  reward_decay=0.9,
-                 prioritized=False):
+                 prioritized=False,
+                 dueling=False):
         
         self.action_space = action_space
         self.observation_space = observation_space
@@ -138,6 +154,7 @@ class DQN_Brain:
         self.epsilon = 0 if e_greedy_increment is not None else self.epsilon_max
         self.gamma = reward_decay
         self.prioritized = prioritized
+        self.dueling = dueling
         self.lose_weight = np.ones((self.batch_size,1))
 
         if prioritized:
@@ -150,18 +167,24 @@ class DQN_Brain:
 
         self.build_network()
     
-    def build_network(self):
-        self.q_eval = tf.keras.models.Sequential([
-            tf.keras.layers.Dense(10, input_shape=(None, self.observation_space), activation='relu'),
-            tf.keras.layers.Dense(self.action_space)
-        ])
+    def build_model(self):
+        model = tf.keras.models.Sequential()
+        model.add(tf.keras.layers.Dense(10, input_shape=(None, self.observation_space), activation='relu'))
+        if self.dueling:
+            model.add(Dueling())
+        model.add(tf.keras.layers.Dense(self.action_space))
 
+        return model
+
+
+    def build_network(self):
+        # Evaluation network
+        self.q_eval = self.build_model()
         self.q_eval.compile(optimizer='rmsprop', loss='mse')
 
-        self.q_target = tf.keras.models.Sequential([
-            tf.keras.layers.Dense(10, input_shape=(None, self.observation_space), activation='relu'),
-            tf.keras.layers.Dense(self.action_space)
-        ])
+        # Target network
+        self.q_target = self.build_model()
+
     
     def store_transaction(self, observation, action, reward, observation_):
         transaction = np.hstack((observation, [action, reward], observation_))

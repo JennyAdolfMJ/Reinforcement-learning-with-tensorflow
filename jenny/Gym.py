@@ -10,7 +10,8 @@ class Gym:
                                self.env.observation_space.shape[0], 
                                memory_size=2000, 
                                e_greedy_increment=0.001,
-                               prioritized=True)
+                               prioritized=True,
+                               dueling=True)
         
     def run(self):
         his_steps = []
